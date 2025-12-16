@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQ - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="logo-container">
+            <img id="theme-logo" src="/static/img/logo.png" alt="EduQ Logo" class="nav-logo">
+        </div>
+
+        <div class="nav-actions">
+            <button id="theme-toggle" class="icon-btn" title="Alternar Tema">
+                <i class="fas fa-moon"></i>
+            </button>
+
+            <div class="user-menu-container">
+                <button id="user-btn" class="icon-btn">
+                    <i class="fas fa-user-circle" style="font-size: 1.5rem;"></i>
+                </button>
+
+                <div id="user-dropdown" class="dropdown-menu">
+                    <div class="user-header">
+                        <strong id="dropdown-name">Carregando...</strong>
+                        <small id="dropdown-email">...</small>
+                    </div>
+                    <hr>
+                    <a href="#" class="dropdown-item"><i class="fas fa-cog"></i> Editar Perfil</a>
+                    <a href="#" onclick="logout()" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt"></i>
+                        Sair</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+
+        <header class="dashboard-header">
+            <h1>Olá, <span id="user-name">Estudante</span>! 👋</h1>
+            <p class="motivational-quote">"O sucesso é a soma de pequenos esforços repetidos dia após dia!"</p>
+        </header>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <h3>Total de Questões</h3>
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-icon"><i class="fas fa-bullseye" style="color: blue;"></i></div>
+            </div>
+            <div class="stat-card">
+                <h3>Taxa de Acertos</h3>
+                <div class="stat-value text-green" id="stat-accuracy">0%</div>
+                <div class="stat-icon"><i class="fas fa-award" style="color: green;"></i></div>
+            </div>
+            <div class="stat-card">
+                <h3>Questões Corretas</h3>
+                <div class="stat-value text-green" id="stat-correct">0</div>
+                <div class="stat-icon"><i class="fas fa-check-circle" style="color: green;"></i></div>
+            </div>
+            <div class="stat-card">
+                <h3>Questões Incorretas</h3>
+                <div class="stat-value text-red" id="stat-incorrect">0</div>
+                <div class="stat-icon"><i class="fas fa-times-circle" style="color: red;"></i></div>
+            </div>
+
+            <div class="stat-card wide">
+                <h3 class="flex-header"><i class="fas fa-chart-line text-green"></i> Seus Pontos Fortes</h3>
+                <p class="sub-text">Matérias com melhor desempenho</p>
+                <div id="strengths-container">
+                </div>
+            </div>
+
+            <div class="stat-card wide">
+                <h3 class="flex-header"><i class="fas fa-chart-line text-red"></i> Áreas de Melhoria</h3>
+                <p class="sub-text">Matérias que precisam de mais atenção</p>
+                <div id="weaknesses-container">
+                </div>
+            </div>
+        </section>
+
+        <section class="search-section">
+            <div class="search-card">
+                <h3><i class="fas fa-search"></i> Buscar Questões</h3>
+                <p>Use os filtros abaixo para encontrar questões específicas</p>
+
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label>Instituição</label>
+                        <select id="filter-institution">
+                            <option value="Todas">Todas</option>
+                            <option value="ENEM">ENEM</option>
+                            <option value="FUVEST">FUVEST</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Matéria</label>
+                        <select id="filter-subject">
+                            <option value="Todas">Todas</option>
+                            <option value="Matemática">Matemática</option>
+                            <option value="Física">Física</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Assunto</label>
+                        <select id="filter-topic">
+                            <option value="Todos">Todos</option>
+                            <option value="Álgebra">Álgebra</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Dificuldade</label>
+                        <select id="filter-difficulty">
+                            <option value="Todas">Todas</option>
+                            <option value="EASY">Fácil</option>
+                            <option value="MEDIUM">Médio</option>
+                            <option value="HARD">Difícil</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn-search" onclick="loadQuestions()">
+                    <i class="fas fa-search"></i> Pesquisar Questões
+                </button>
+            </div>
+        </section>
+
+        <div id="questions-container"></div>
+
+        <div id="new-search-container" style="display: none; text-align: center; margin: 40px 0;">
+            <button class="btn-outline" onclick="resetSearch()">Nova Busca</button>
+        </div>
+
+    </div>
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-col">
+                <div class="logo-text">🎓 EduQ</div>
+                <p>Sua plataforma completa de questões de vestibulares. Prepare-se para alcançar seus objetivos.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Links Rápidos</h4>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">Questões</a></li>
+                    <li><a href="#">Sobre Nós</a></li>
+                    <li><a href="#">Suporte</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contato</h4>
+                <p><i class="far fa-envelope"></i> contato@eduq.com.br</p>
+                <p><i class="fas fa-phone-alt"></i> (11) 9999-9999</p>
+                <p><i class="fas fa-map-marker-alt"></i> São Paulo, SP</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            © 2025 EduQ. Todos os direitos reservados.
+        </div>
+    </footer>
+
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>
