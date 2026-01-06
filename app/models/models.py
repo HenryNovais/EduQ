@@ -23,3 +23,13 @@ class Alternative(db.Model):
     text = db.Column(db.Text, nullable=False)
     is_correct = db.Column(db.Boolean, default=False)
     question_id = db.Column(db.Integer, db.ForeignKey('questions.id'))
+
+
+class UserAnswer(db.Model):
+    __tablename__ = 'user_answers'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('questions.id'), nullable=False)
+    alternative_id = db.Column(db.Integer, db.ForeignKey('alternatives.id'), nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    answered_at = db.Column(db.DateTime, default=datetime.utcnow)
