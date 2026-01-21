@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUserData();
     loadStats();
     setupTheme();
+    loadFilterOptions();
 });
 
 function checkAuth() {
@@ -100,36 +101,53 @@ function renderBars(containerId, items, color) {
 
 /* --- BUSCA E QUESTÕES --- */
 async function loadQuestions() {
-    const filters = {
-        difficulty: document.getElementById('filter-difficulty').value
-        // Adicionar outros filtros na query string
-    };
+    const difficulty = document.getElementById('filter-difficulty').value;
+    const institution = document.getElementById('filter-institution').value;
+    const subject = document.getElementById('filter-subject').value;
+    const topic = document.getElementById('filter-topic').value;
 
-    const response = await fetch(`${API_URL}/questions/search?difficulty=${filters.difficulty}`, {
+    // Monta a URL com todos os parâmetros
+    const params = new URLSearchParams({
+        difficulty,
+        institution,
+        subject,
+        topic
+    });
+
+    const response = await fetch(`${API_URL}/questions/search?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     const questions = await response.json();
-
+    
     renderQuestions(questions);
-
-    // Mostra botão de nova busca
+    
     document.getElementById('new-search-container').style.display = 'block';
-    // Rola até as questões
-    document.getElementById('questions-container').scrollIntoView({ behavior: 'smooth' });
 }
 
 function renderQuestions(questions) {
     const container = document.getElementById('questions-container');
     container.innerHTML = '';
 
+    if (questions.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color: #666;">Nenhuma questão encontrada com esses filtros.</p>';
+        return;
+    }
+
     questions.forEach(q => {
         const card = document.createElement('div');
         card.className = 'question-card';
+        
+        // Tradutor simples de dificuldade para PT-BR
+        const diffMap = { 'EASY': 'Fácil', 'MEDIUM': 'Médio', 'HARD': 'Difícil' };
+        const diffLabel = diffMap[q.difficulty] || q.difficulty;
+
+        // AQUI ESTÁ A CORREÇÃO VISUAL: Usamos q.institution, q.subject, etc.
         card.innerHTML = `
             <div class="tags">
-                <span class="tag">ENEM</span>
-                <span class="tag">Matemática</span>
-                <span class="tag medium">${q.difficulty}</span>
+                <span class="tag" style="background:#e3f2fd; color:#0d47a1;">${q.institution}</span>
+                <span class="tag" style="background:#f3e5f5; color:#4a148c;">${q.subject}</span>
+                <span class="tag" style="background:#e8f5e9; color:#1b5e20;">${q.topic}</span>
+                <span class="tag medium">${diffLabel}</span>
             </div>
             <p style="margin-bottom: 20px; font-size: 1.1rem;">${q.statement}</p>
             <div class="alternatives-list" id="q-${q.id}">
@@ -144,6 +162,33 @@ function renderQuestions(questions) {
         `;
         container.appendChild(card);
     });
+}
+
+async function loadFilterOptions() {
+    try {
+        const response = await fetch(`${API_URL}/questions/options`);
+        const data = await response.json();
+
+        // Função auxiliar para preencher select
+        const fillSelect = (id, items) => {
+            const select = document.getElementById(id);
+            // Mantém apenas a primeira opção (Todas)
+            select.innerHTML = select.options[0].outerHTML; 
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item;
+                option.textContent = item;
+                select.appendChild(option);
+            });
+        };
+
+        fillSelect('filter-institution', data.institutions);
+        fillSelect('filter-subject', data.subjects);
+        fillSelect('filter-topic', data.topics);
+
+    } catch (error) {
+        console.error("Erro ao carregar filtros:", error);
+    }
 }
 
 /* --- RESPONDER QUESTÃO --- */
