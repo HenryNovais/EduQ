@@ -1,25 +1,26 @@
 import pytest
-import json
 from app import create_app, db
 from app.models.models import User, Institution, Subject, Topic, Question, Alternative
 
 # --- CONFIGURAÇÃO (FIXTURES) ---
 @pytest.fixture
 def client():
-    """Configura um banco de dados temporário em memória para cada teste."""
-    app = create_app()
-    app.config['TESTING'] = True
-    # Usa SQLite em memória para ser muito rápido e não sujar seu banco MySQL
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:' 
-    app.config['SECRET_KEY'] = 'chave_teste_123'
+    # Agora passamos a configuração DIRETO na criação do app
+    app = create_app(test_config={
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:', # Banco na memória RAM
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'SECRET_KEY': 'chave_teste_123'
+    })
 
     with app.test_client() as client:
         with app.app_context():
-            db.create_all()
-            _populate_db_for_testing() # Popula dados iniciais
+            db.create_all() # Cria as tabelas no SQLite (vazio)
+            _populate_db_for_testing() # Popula o SQLite
             yield client
             db.session.remove()
             db.drop_all()
+
 
 def _populate_db_for_testing():
     """Cria dados falsos (Seed) necessários para os testes rodarem."""
