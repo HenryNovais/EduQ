@@ -237,3 +237,70 @@ function resetSearch() {
     document.getElementById('new-search-container').style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+
+/* --- EDITAR PERFIL --- */
+
+function openProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    
+    // Preenche dados
+    document.getElementById('edit-name').value = localStorage.getItem('userName') || '';
+    document.getElementById('edit-email').value = localStorage.getItem('userEmail') || '';
+    
+    // Limpa campos de senha
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+
+    document.getElementById('user-dropdown').classList.remove('show');
+    modal.style.display = 'flex';
+}
+
+function closeProfileModal() {
+    document.getElementById('profile-modal').style.display = 'none';
+}
+
+async function saveProfile() {
+    const name = document.getElementById('edit-name').value;
+    const currentPass = document.getElementById('current-password').value;
+    const newPass = document.getElementById('new-password').value;
+
+    // Monta o objeto de envio
+    const body = { name: name };
+
+    // Só envia senha se o usuário digitou algo na "Nova Senha"
+    if (newPass) {
+        if (!currentPass) {
+            alert("⚠️ Atenção: Para definir uma nova senha, você precisa digitar sua senha atual.");
+            document.getElementById('current-password').focus();
+            return;
+        }
+        body.current_password = currentPass;
+        body.new_password = newPass;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/auth/update`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('✅ Perfil atualizado com sucesso!');
+            localStorage.setItem('userName', data.name);
+            document.getElementById('user-name').textContent = data.name;
+            closeProfileModal();
+        } else {
+            alert('❌ Erro: ' + data.error);
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erro de conexão ao atualizar perfil.');
+    }
+}
