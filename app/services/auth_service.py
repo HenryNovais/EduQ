@@ -25,5 +25,5 @@ class AuthService:
                 'user_id': user.id,
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }, current_app.config['SECRET_KEY'], algorithm="HS256")
-            return {'token': token, 'name': user.name}
+            return {'token': token, 'name': user.name, 'email': user.email}
         return None

@@ -15,9 +15,13 @@ function checkAuth() {
 
 function loadUserData() {
     const name = localStorage.getItem('userName') || 'Estudante';
+    const email = localStorage.getItem('userEmail') || 'usuario@eduq.com'; // Pega do localStorage
+
     document.getElementById('user-name').textContent = name;
+
+    // Atualiza os dados dentro do menu suspenso (Dropdown)
     document.getElementById('dropdown-name').textContent = name;
-    document.getElementById('dropdown-email').textContent = 'henry@email.com'; // Pode vir do login
+    document.getElementById('dropdown-email').textContent = email; // Agora mostra o email certo!
 }
 
 /* --- TEMA DARK/LIGHT --- */
@@ -118,9 +122,9 @@ async function loadQuestions() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     const questions = await response.json();
-    
+
     renderQuestions(questions);
-    
+
     document.getElementById('new-search-container').style.display = 'block';
 }
 
@@ -136,7 +140,7 @@ function renderQuestions(questions) {
     questions.forEach(q => {
         const card = document.createElement('div');
         card.className = 'question-card';
-        
+
         // Tradutor simples de dificuldade para PT-BR
         const diffMap = { 'EASY': 'Fácil', 'MEDIUM': 'Médio', 'HARD': 'Difícil' };
         const diffLabel = diffMap[q.difficulty] || q.difficulty;
@@ -173,7 +177,7 @@ async function loadFilterOptions() {
         const fillSelect = (id, items) => {
             const select = document.getElementById(id);
             // Mantém apenas a primeira opção (Todas)
-            select.innerHTML = select.options[0].outerHTML; 
+            select.innerHTML = select.options[0].outerHTML;
             items.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item;
@@ -243,11 +247,11 @@ function resetSearch() {
 
 function openProfileModal() {
     const modal = document.getElementById('profile-modal');
-    
+
     // Preenche dados
     document.getElementById('edit-name').value = localStorage.getItem('userName') || '';
     document.getElementById('edit-email').value = localStorage.getItem('userEmail') || '';
-    
+
     // Limpa campos de senha
     document.getElementById('current-password').value = '';
     document.getElementById('new-password').value = '';
@@ -282,9 +286,9 @@ async function saveProfile() {
     try {
         const response = await fetch(`${API_URL}/auth/update`, {
             method: 'PUT',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` 
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify(body)
         });

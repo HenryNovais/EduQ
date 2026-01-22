@@ -113,7 +113,7 @@
                     // Salva o token e o nome para usar no dashboard
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('userName', data.name);
-                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userEmail', data.email);
                     window.location.href = '/dashboard';
                 } else {
                     errorMsg.textContent = data.error || "Erro ao fazer login";
