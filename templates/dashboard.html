@@ -7,8 +7,19 @@
     <title>EduQ - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/png" href="static/img/logo.png">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=waving_hand" />
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+<style>
+    .material-symbols-outlined {
+        font-variation-settings:
+            'FILL' 0,
+            'wght' 800,
+            'GRAD' 0,
+            'opsz' 40
+    }
+</style>
 
 <body>
 
@@ -46,7 +57,9 @@
     <div class="main-container">
 
         <header class="dashboard-header">
-            <h1>Olá, <span id="user-name">Estudante</span>! 👋</h1>
+            <h1>Olá, <span id="user-name">Estudante</span>! <span class="material-symbols-outlined">
+                    waving_hand
+                </span></h1>
             <p class="motivational-quote">"O sucesso é a soma de pequenos esforços repetidos dia após dia!"</p>
         </header>
 
@@ -166,7 +179,7 @@
     <div id="profile-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚙️ Editar Perfil</h3>
+                <h3><img src="/static/img/settings.png" alt="" style="margin-right: 2%;"> Editar Perfil</h3>
                 <button class="close-btn" onclick="closeProfileModal()">&times;</button>
             </div>
 
