@@ -4,7 +4,7 @@ from app.models.models import UserAnswer, Alternative
 from app import db
 import jwt
 from datetime import datetime
-from app.models.models import Institution, Subject, Topic, Question, Alternative, User # Adicione os imports
+from app.models.models import Institution, Subject, Topic, Question, Alternative, UserAnswer, User # Adicione os imports
 
 question_bp = Blueprint('questions', __name__)
 
@@ -156,4 +156,43 @@ def create_question():
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@question_bp.route('/delete/<int:id>', methods=['DELETE'])
+def delete_question(id):
+    # 1. Verificação de Segurança (Admin)
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return jsonify({"error": "Token ausente"}), 401
+    
+    try:
+        token = auth_header.split(" ")[1]
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        if not payload.get('is_admin'):
+            return jsonify({"error": "Acesso negado. Apenas admins."}), 403
+    except:
+        return jsonify({"error": "Token inválido"}), 401
+
+    # 2. Buscar a questão
+    question = QuestionRepository.get_by_id(id) # Ou Question.query.get(id)
+    if not question:
+        return jsonify({"error": "Questão não encontrada"}), 404
+
+    try:
+        # 3. LIMPEZA DOS DADOS (Cascata Manual)
+        # Primeiro apaga o histórico de respostas dessa questão
+        UserAnswer.query.filter_by(question_id=id).delete()
+        
+        # Depois apaga as alternativas dessa questão
+        Alternative.query.filter_by(question_id=id).delete()
+
+        # Por fim, apaga a questão
+        db.session.delete(question)
+        
+        db.session.commit()
+        return jsonify({"message": "Questão excluída com sucesso!"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        # Agora o erro vai aparecer detalhado no seu alert
         return jsonify({"error": str(e)}), 500

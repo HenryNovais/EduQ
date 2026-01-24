@@ -141,17 +141,30 @@ function renderQuestions(questions) {
         return;
     }
 
+    
+
     questions.forEach(q => {
         const card = document.createElement('div');
         card.className = 'question-card';
+
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
         // Tradutor simples de dificuldade para PT-BR
         const diffMap = { 'EASY': 'Fácil', 'MEDIUM': 'Médio', 'HARD': 'Difícil' };
         const diffLabel = diffMap[q.difficulty] || q.difficulty;
 
+        let deleteBtn = '';
+        if (isAdmin) {
+            deleteBtn = `
+                <button onclick="deleteQuestion(${q.id})" style="float:right; color:red; background:none; border:none; cursor:pointer;" title="Excluir Questão">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        }
+
         // AQUI ESTÁ A CORREÇÃO VISUAL: Usamos q.institution, q.subject, etc.
         card.innerHTML = `
-            <div class="tags">
+            ${deleteBtn}<div class="tags">
                 <span class="tag" style="background:#e3f2fd; color:#0d47a1;">${q.institution}</span>
                 <span class="tag" style="background:#f3e5f5; color:#4a148c;">${q.subject}</span>
                 <span class="tag" style="background:#e8f5e9; color:#1b5e20;">${q.topic}</span>
@@ -170,6 +183,28 @@ function renderQuestions(questions) {
         `;
         container.appendChild(card);
     });
+}
+
+// Função para chamar a API de Delete
+async function deleteQuestion(id) {
+    if (!confirm("Tem certeza que deseja excluir esta questão?")) return;
+
+    try {
+        const res = await fetch(`${API_URL}/questions/delete/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        if (res.ok) {
+            alert("Questão excluída!");
+            loadQuestions(); // Recarrega a lista
+        } else {
+            const data = await res.json();
+            alert("Erro: " + (data.error || "Desconhecido"));
+        }
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 async function loadFilterOptions() {
