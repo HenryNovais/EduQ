@@ -41,5 +41,12 @@ def create_app(test_config=None):
     def register_page():
         from flask import render_template
         return render_template('register.html')
+    
+    @app.route('/admin')
+    def admin_panel():
+        from flask import render_template
+        return render_template('admin.html')
 
     return app
+
+

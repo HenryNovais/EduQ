@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     setupTheme();
     loadFilterOptions();
+    const isAdmin = localStorage.getItem('isAdmin') === 'true'; // O localStorage salva como string
+    if (isAdmin) {
+        document.getElementById('admin-btn').style.display = 'inline-block';
+    }
 });
 
 function checkAuth() {

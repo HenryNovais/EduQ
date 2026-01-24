@@ -3,6 +3,8 @@ from app.repositories.question_repository import QuestionRepository
 from app.models.models import UserAnswer, Alternative
 from app import db
 import jwt
+from datetime import datetime
+from app.models.models import Institution, Subject, Topic, Question, Alternative, User # Adicione os imports
 
 question_bp = Blueprint('questions', __name__)
 
@@ -85,3 +87,73 @@ def check_answer(question_id):
         "correct_id": correct_alt.id,
         "explanation": question.explanation
     })
+
+
+@question_bp.route('/create', methods=['POST'])
+def create_question():
+    # 1. Verificação de Segurança (Apenas Admin)
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return jsonify({"error": "Não autorizado"}), 401
+    try:
+        token = auth_header.split(" ")[1]
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        if not payload.get('is_admin'):
+            return jsonify({"error": "Acesso restrito a administradores"}), 403
+    except:
+        return jsonify({"error": "Token inválido"}), 401
+
+    data = request.json
+
+    try:
+        # 2. Processar Instituição (Busca ou Cria)
+        inst_name = data.get('institution')
+        institution = Institution.query.filter_by(name=inst_name).first()
+        if not institution:
+            institution = Institution(name=inst_name)
+            db.session.add(institution)
+            db.session.flush() # Gera o ID sem commitar ainda
+
+        # 3. Processar Matéria (Busca ou Cria)
+        subj_name = data.get('subject')
+        subject = Subject.query.filter_by(name=subj_name).first()
+        if not subject:
+            subject = Subject(name=subj_name)
+            db.session.add(subject)
+            db.session.flush()
+
+        # 4. Processar Assunto/Tópico (Busca ou Cria, ligado à Matéria)
+        topic_name = data.get('topic')
+        topic = Topic.query.filter_by(name=topic_name, subject_id=subject.id).first()
+        if not topic:
+            topic = Topic(name=topic_name, subject=subject) # Associa à matéria acima
+            db.session.add(topic)
+            db.session.flush()
+
+        # 5. Criar a Questão
+        new_q = Question(
+            statement=data.get('statement'),
+            explanation=data.get('explanation'),
+            difficulty=data.get('difficulty'),
+            institution=institution,
+            topic=topic,
+            year=datetime.now().year # Ou pegar do input se quiser
+        )
+        db.session.add(new_q)
+        db.session.flush()
+
+        # 6. Criar Alternativas
+        alternatives_data = data.get('alternatives') # Lista de objetos {text: "...", is_correct: bool}
+        for alt in alternatives_data:
+            new_alt = Alternative(
+                text=alt['text'],
+                is_correct=alt['is_correct'],
+                question=new_q
+            )
+            db.session.add(new_alt)
+
+        db.session.commit()
+        return jsonify({"message": "Questão cadastrada com sucesso!"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

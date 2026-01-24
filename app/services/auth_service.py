@@ -23,7 +23,12 @@ class AuthService:
         if user and check_password_hash(user.password_hash, password):
             token = jwt.encode({
                 'user_id': user.id,
+                'is_admin': user.is_admin,
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }, current_app.config['SECRET_KEY'], algorithm="HS256")
-            return {'token': token, 'name': user.name, 'email': user.email}
+            return {'token': token, 
+                    'name': user.name, 
+                    'email': user.email,
+                    'is_admin': user.is_admin
+                    }
         return None

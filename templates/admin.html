@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>EduQ - Área Administrativa</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .admin-container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .form-section { background: var(--bg-card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text-main); }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-body); color: var(--text-main); }
+        .alt-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .radio-correct { width: 20px; height: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo-container">
+            <img src="/static/img/logo.png" style="height: 50px;"> <span style="font-weight:bold; margin-left:10px; color:var(--primary)">Área Admin</span>
+        </div>
+        <a href="/dashboard" class="btn-outline">Voltar ao Dashboard</a>
+    </nav>
+
+    <div class="admin-container">
+        <div class="form-section">
+            <h2 style="color: var(--primary); margin-bottom: 20px;"><i class="fas fa-plus-circle"></i> Nova Questão</h2>
+            
+            <form id="createQuestionForm">
+                <div style="margin-bottom: 15px;">
+                    <label>Enunciado da Questão</label>
+                    <textarea id="statement" rows="4" required placeholder="Digite o texto da questão..."></textarea>
+                </div>
+
+                <div class="row-group">
+                    <div>
+                        <label>Instituição (Ex: ENEM, FUVEST)</label>
+                        <input type="text" id="institution" required list="inst-list">
+                        <datalist id="inst-list"></datalist> </div>
+                    <div>
+                        <label>Dificuldade</label>
+                        <select id="difficulty">
+                            <option value="EASY">Fácil</option>
+                            <option value="MEDIUM">Médio</option>
+                            <option value="HARD">Difícil</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row-group">
+                    <div>
+                        <label>Matéria (Ex: Matemática)</label>
+                        <input type="text" id="subject" required list="subj-list">
+                        <datalist id="subj-list"></datalist>
+                    </div>
+                    <div>
+                        <label>Assunto (Ex: Logaritmo)</label>
+                        <input type="text" id="topic" required>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+
+                <label>Alternativas (Marque a correta)</label>
+                <div id="alternatives-container">
+                    <div class="alt-group">
+                        <input type="radio" name="correct" value="0" class="radio-correct" checked>
+                        <input type="text" class="alt-text" placeholder="Alternativa A" required>
+                    </div>
+                    <div class="alt-group">
+                        <input type="radio" name="correct" value="1" class="radio-correct">
+                        <input type="text" class="alt-text" placeholder="Alternativa B" required>
+                    </div>
+                    <div class="alt-group">
+                        <input type="radio" name="correct" value="2" class="radio-correct">
+                        <input type="text" class="alt-text" placeholder="Alternativa C" required>
+                    </div>
+                    <div class="alt-group">
+                        <input type="radio" name="correct" value="3" class="radio-correct">
+                        <input type="text" class="alt-text" placeholder="Alternativa D" required>
+                    </div>
+                    <div class="alt-group">
+                        <input type="radio" name="correct" value="4" class="radio-correct">
+                        <input type="text" class="alt-text" placeholder="Alternativa E" required>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label>Explicação / Resolução</label>
+                    <textarea id="explanation" rows="3" required placeholder="Explique por que a resposta está correta..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 20px;">Cadastrar Questão</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/api';
+
+        // Carregar listas para autocomplete
+        async function loadDatalists() {
+            const res = await fetch(`${API_URL}/questions/options`);
+            const data = await res.json();
+            
+            const fillList = (id, items) => {
+                const list = document.getElementById(id);
+                items.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    list.appendChild(opt);
+                });
+            };
+            fillList('inst-list', data.institutions);
+            fillList('subj-list', data.subjects);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar se é admin
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                alert('Acesso negado.');
+                window.location.href = '/dashboard';
+            }
+            loadDatalists();
+        });
+
+        document.getElementById('createQuestionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Montar objeto das alternativas
+            const altInputs = document.querySelectorAll('.alt-text');
+            const radioInputs = document.querySelectorAll('input[name="correct"]');
+            let alternatives = [];
+            
+            altInputs.forEach((input, index) => {
+                alternatives.push({
+                    text: input.value,
+                    is_correct: radioInputs[index].checked
+                });
+            });
+
+            const payload = {
+                statement: document.getElementById('statement').value,
+                explanation: document.getElementById('explanation').value,
+                institution: document.getElementById('institution').value,
+                subject: document.getElementById('subject').value,
+                topic: document.getElementById('topic').value,
+                difficulty: document.getElementById('difficulty').value,
+                alternatives: alternatives
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/questions/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('✅ Questão cadastrada com sucesso!');
+                    location.reload(); // Limpa o formulário
+                } else {
+                    const err = await res.json();
+                    alert('Erro: ' + err.error);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erro de conexão.');
+            }
+        });
+    </script>
+</body>
+</html>

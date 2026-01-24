@@ -114,6 +114,7 @@
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('userName', data.name);
                     localStorage.setItem('userEmail', data.email);
+                    localStorage.setItem('isAdmin', data.is_admin);
                     window.location.href = '/dashboard';
                 } else {
                     errorMsg.textContent = data.error || "Erro ao fazer login";

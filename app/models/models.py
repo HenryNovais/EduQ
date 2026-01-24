@@ -7,6 +7,7 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
 class Institution(db.Model):
     __tablename__ = 'institutions'
@@ -34,7 +35,9 @@ class Question(db.Model):
     explanation = db.Column(db.Text)
     difficulty = db.Column(db.Enum('EASY', 'MEDIUM', 'HARD'), nullable=False)
     
-    # Chaves Estrangeiras Novas
+    year = db.Column(db.Integer, default=2025) 
+
+    # Chaves Estrangeiras
     institution_id = db.Column(db.Integer, db.ForeignKey('institutions.id'))
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'))
 
