@@ -33,7 +33,7 @@ class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     statement = db.Column(db.Text, nullable=False)
     explanation = db.Column(db.Text)
-    difficulty = db.Column(db.Enum('EASY', 'MEDIUM', 'HARD'), nullable=False)
+    difficulty = db.Column(db.Enum('EASY', 'MEDIUM', 'HARD', name='difficulty_level'), nullable=False)
     
     year = db.Column(db.Integer, default=2025) 
 
