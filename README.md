@@ -7,7 +7,7 @@
 
 **EduQ** é uma plataforma web completa para resolução de questões de vestibulares e concursos. O sistema oferece um ambiente interativo onde estudantes podem testar seus conhecimentos, receber feedback imediato e acompanhar seu desempenho através de um dashboard estatístico detalhado.
 
-🔗 **Acesse o projeto online:** [https://eduq-app.onrender.com](https://eduq-app.onrender.com)
+🔗 **Acesse o projeto online:** [[https://eduq-app.onrender.com](https://eduq.onrender.com)]
 
 ---
 
