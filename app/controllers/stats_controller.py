@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, current_app
-from app.models.models import UserAnswer, Question, Topic, Subject, User
+from app.models.models import UserAnswer, Question, Topic, Subject
 from app import db
 from sqlalchemy import func, case
 import jwt
@@ -20,15 +20,18 @@ def get_stats():
         return jsonify({"error": "Token inválido"}), 401
 
     try:
-        # 2. Estatísticas Gerais (Abordagem compatível com Postgres e MySQL)
+        # 2. Estatísticas Gerais
+        # .count() funciona em qualquer banco (Postgres/MySQL/SQLite)
         total_answered = UserAnswer.query.filter_by(user_id=user_id).count()
+        
+        # Filtramos explicitamente onde is_correct=True e contamos as linhas
         total_correct = UserAnswer.query.filter_by(user_id=user_id, is_correct=True).count()
         
-        # Evita divisão por zero
         accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0
 
         # 3. Estatísticas por Matéria
-        # Query complexa: Junta Resposta -> Questão -> Tópico -> Matéria
+        # O 'case' traduz o booleano para número (1) antes de contar. 
+        # Isso satisfaz o PostgreSQL e funciona no MySQL.
         stats_query = db.session.query(
             Subject.name,
             func.count(UserAnswer.id).label('total'),
@@ -45,7 +48,8 @@ def get_stats():
                 "name": name,
                 "total": total,
                 "correct": correct,
-                "percentage": round((correct / total) * 100, 1) if total > 0 else 0
+                # Garante que 'correct' seja tratado como número (às vezes volta None se for zero)
+                "percentage": round(((correct or 0) / total) * 100, 1) if total > 0 else 0
             })
 
         return jsonify({
@@ -57,5 +61,5 @@ def get_stats():
         })
 
     except Exception as e:
-        print(f"ERRO STATS: {e}") # Debug no terminal do Render
+        print(f"ERRO STATS: {e}") 
         return jsonify({"error": "Erro ao calcular estatísticas"}), 500
