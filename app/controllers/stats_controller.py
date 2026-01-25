@@ -20,27 +20,26 @@ def get_stats():
         return jsonify({"error": "Token inválido"}), 401
 
     try:
-        # 2. Estatísticas Gerais
-        # .count() funciona em qualquer banco (Postgres/MySQL/SQLite)
+        # 2. Números Totais (Isso aqui TEM que funcionar se estiver salvando)
         total_answered = UserAnswer.query.filter_by(user_id=user_id).count()
         
-        # Filtramos explicitamente onde is_correct=True e contamos as linhas
+        # Contagem de acertos compatível com Postgres
         total_correct = UserAnswer.query.filter_by(user_id=user_id, is_correct=True).count()
         
         accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0
 
-        # 3. Estatísticas por Matéria
-        # O 'case' traduz o booleano para número (1) antes de contar. 
-        # Isso satisfaz o PostgreSQL e funciona no MySQL.
+        # 3. Estatísticas por Matéria (Agora com OUTER JOIN para não sumir dados)
+        # Se a matéria for Null, substituímos o nome por "Geral/Outros"
         stats_query = db.session.query(
-            Subject.name,
+            func.coalesce(Subject.name, 'Geral').label('subject_name'),
             func.count(UserAnswer.id).label('total'),
             func.count(case((UserAnswer.is_correct == True, 1))).label('correct')
-        ).join(Question, UserAnswer.question_id == Question.id)\
-         .join(Topic, Question.topic_id == Topic.id)\
-         .join(Subject, Topic.subject_id == Subject.id)\
+        ).select_from(UserAnswer)\
+         .outerjoin(Question, UserAnswer.question_id == Question.id)\
+         .outerjoin(Topic, Question.topic_id == Topic.id)\
+         .outerjoin(Subject, Topic.subject_id == Subject.id)\
          .filter(UserAnswer.user_id == user_id)\
-         .group_by(Subject.name).all()
+         .group_by(func.coalesce(Subject.name, 'Geral')).all()
 
         subject_data = []
         for name, total, correct in stats_query:
@@ -48,11 +47,12 @@ def get_stats():
                 "name": name,
                 "total": total,
                 "correct": correct,
-                # Garante que 'correct' seja tratado como número (às vezes volta None se for zero)
                 "percentage": round(((correct or 0) / total) * 100, 1) if total > 0 else 0
             })
 
+        # DEBUG: Adicionei esse campo para você ver se o Backend está achando algo
         return jsonify({
+            "debug_info": f"Usuário {user_id} tem {total_answered} respostas no banco.",
             "total_questions": total_answered,
             "correct_answers": total_correct,
             "incorrect_answers": total_answered - total_correct,
@@ -61,5 +61,5 @@ def get_stats():
         })
 
     except Exception as e:
-        print(f"ERRO STATS: {e}") 
-        return jsonify({"error": "Erro ao calcular estatísticas"}), 500
+        print(f"ERRO CRÍTICO STATS: {e}") 
+        return jsonify({"error": str(e)}), 500
