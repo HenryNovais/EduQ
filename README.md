@@ -114,17 +114,29 @@ O servidor iniciará em http://127.0.0.1:5000.
 
 📂 Estrutura do Projeto
 EduQ/
+
 ├── app/
+
 │   ├── controllers/    # Rotas da API (Auth, Questions, Stats)
+
 │   ├── models/         # Classes do Banco de Dados
+
 │   ├── repositories/   # Consultas SQL
+
 │   ├── services/       # Regras de Negócio
+
 │   └── __init__.py     # Inicialização do App Factory
+
 ├── static/             # CSS, JS e Imagens
+
 ├── templates/          # Arquivos HTML
+
 ├── tests/              # Testes Automatizados
+
 ├── config.py           # Configurações de Ambiente
+
 ├── run.py              # Ponto de Entrada
+
 └── requirements.txt    # Dependências
 
 ---
