@@ -6,7 +6,7 @@ import jwt
 
 stats_bp = Blueprint('stats', __name__)
 
-@stats_bp.route('/', methods=['GET'])
+@stats_bp.route('/dashboard', methods=['GET']) 
 def get_stats():
     # 1. Autenticação
     auth_header = request.headers.get('Authorization')
