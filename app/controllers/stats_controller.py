@@ -6,7 +6,7 @@ import jwt
 
 stats_bp = Blueprint('stats', __name__)
 
-@stats_bp.route('/dashboard', methods=['GET']) 
+@stats_bp.route('/dashboard', methods=['GET'])
 def get_stats():
     # 1. Autenticação
     auth_header = request.headers.get('Authorization')
@@ -20,16 +20,17 @@ def get_stats():
         return jsonify({"error": "Token inválido"}), 401
 
     try:
-        # 2. Números Totais (Isso aqui TEM que funcionar se estiver salvando)
+        # 2. Estatísticas Gerais (Compatível com MySQL e Postgres)
         total_answered = UserAnswer.query.filter_by(user_id=user_id).count()
         
-        # Contagem de acertos compatível com Postgres
+        # Filtro explícito para contar acertos
         total_correct = UserAnswer.query.filter_by(user_id=user_id, is_correct=True).count()
         
+        total_incorrect = total_answered - total_correct
         accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0
 
-        # 3. Estatísticas por Matéria (Agora com OUTER JOIN para não sumir dados)
-        # Se a matéria for Null, substituímos o nome por "Geral/Outros"
+        # 3. Estatísticas por Matéria
+        # Usamos OUTER JOIN para não quebrar se faltar tópico/matéria
         stats_query = db.session.query(
             func.coalesce(Subject.name, 'Geral').label('subject_name'),
             func.count(UserAnswer.id).label('total'),
@@ -41,23 +42,34 @@ def get_stats():
          .filter(UserAnswer.user_id == user_id)\
          .group_by(func.coalesce(Subject.name, 'Geral')).all()
 
-        subject_data = []
+        # 4. Processamento para o Frontend (Restaurando a lógica antiga)
+        subjects_performance = []
         for name, total, correct in stats_query:
-            subject_data.append({
-                "name": name,
-                "total": total,
-                "correct": correct,
-                "percentage": round(((correct or 0) / total) * 100, 1) if total > 0 else 0
+            # Garante que correct não seja None
+            safe_correct = correct or 0
+            
+            # Calcula porcentagem inteira para usar na lógica de força/fraqueza
+            score = round((safe_correct / total) * 100) if total > 0 else 0
+            
+            # Lógica de "Pontos Fortes" (> 60%) vs "Áreas de Melhoria"
+            status_type = 'strength' if score >= 60 else 'weakness'
+            
+            subjects_performance.append({
+                'name': name,
+                'score': score,      # Frontend espera 'score'
+                'type': status_type  # Frontend espera 'type' para saber onde exibir
             })
 
-        # DEBUG: Adicionei esse campo para você ver se o Backend está achando algo
+        # Ordenar: Maior pontuação primeiro
+        subjects_performance.sort(key=lambda x: x['score'], reverse=True)
+
+        # 5. Retorno com as chaves EXATAS que o script.js espera
         return jsonify({
-            "debug_info": f"Usuário {user_id} tem {total_answered} respostas no banco.",
-            "total_questions": total_answered,
-            "correct_answers": total_correct,
-            "incorrect_answers": total_answered - total_correct,
-            "accuracy": accuracy,
-            "subjects": subject_data
+            'total_questions': total_answered,
+            'accuracy': accuracy,
+            'correct_count': total_correct,     # Nome corrigido (antes estava correct_answers)
+            'incorrect_count': total_incorrect, # Nome corrigido (antes estava incorrect_answers)
+            'subjects': subjects_performance
         })
 
     except Exception as e:
