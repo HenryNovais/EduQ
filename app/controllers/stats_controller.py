@@ -1,77 +1,59 @@
 from flask import Blueprint, jsonify, request, current_app
+from app.models.models import UserAnswer, Subject, User
 from app import db
-from sqlalchemy import text
+from sqlalchemy import func, case # <--- IMPORTANTE: Importar 'case'
 import jwt
 
 stats_bp = Blueprint('stats', __name__)
 
-@stats_bp.route('/dashboard', methods=['GET'])
-def get_dashboard_stats():
-    # 1. Identificar o usuário pelo Token (igual fizemos no question_controller)
+@stats_bp.route('/', methods=['GET'])
+def get_stats():
     auth_header = request.headers.get('Authorization')
-    user_id = 1 # ID padrão para testes caso não tenha token
+    if not auth_header: return jsonify({"error": "Token ausente"}), 401
     
-    if auth_header:
-        try:
-            token = auth_header.split(" ")[1]
-            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
-            user_id = payload['user_id']
-        except:
-            return jsonify({"error": "Token inválido"}), 401
+    try:
+        token = auth_header.split(" ")[1]
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        user_id = payload['user_id']
+    except:
+        return jsonify({"error": "Token inválido"}), 401
 
-    # 2. Estatísticas Gerais (Total, Acertos, Erros)
-    sql_total = text("SELECT COUNT(*) FROM user_answers WHERE user_id = :uid")
-    sql_correct = text("SELECT COUNT(*) FROM user_answers WHERE user_id = :uid AND is_correct = 1")
-    
-    total = db.session.execute(sql_total, {'uid': user_id}).scalar() or 0
-    correct = db.session.execute(sql_correct, {'uid': user_id}).scalar() or 0
-    incorrect = total - correct
-    accuracy = round((correct / total * 100), 1) if total > 0 else 0
+    # 1. Total de Questões Respondidas
+    total_answered = UserAnswer.query.filter_by(user_id=user_id).count()
 
-    # 3. Estatísticas por Matéria (AQUI ESTÁ A MÁGICA ✨)
-    # Fazemos um JOIN entre Resposta -> Questão -> Tópico -> Matéria
-    sql_subjects = text("""
-        SELECT 
-            s.name AS subject_name,
-            COUNT(ua.id) as total_answered,
-            SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) as total_correct
-        FROM user_answers ua
-        JOIN questions q ON ua.question_id = q.id
-        JOIN topics t ON q.topic_id = t.id
-        JOIN subjects s ON t.subject_id = s.id
-        WHERE ua.user_id = :uid
-        GROUP BY s.name
-    """)
-    
-    results = db.session.execute(sql_subjects, {'uid': user_id}).fetchall()
-    
-    subjects_performance = []
-    
-    for row in results:
-        # O SQLAlchemy retorna as colunas na ordem ou por nome dependendo da versão
-        # Vamos garantir o cálculo da porcentagem
-        subj_total = row.total_answered
-        subj_correct = row.total_correct
-        subj_acc = (subj_correct / subj_total * 100) if subj_total > 0 else 0
-        
-        # Regra de Negócio:
-        # Se acertou 60% ou mais = Ponto Forte (strength)
-        # Menos de 60% = Precisa Melhorar (weakness)
-        status_type = 'strength' if subj_acc >= 60 else 'weakness'
-        
-        subjects_performance.append({
-            'name': row.subject_name,
-            'score': round(subj_acc),
-            'type': status_type
+    # 2. Total de Acertos (CORREÇÃO PARA POSTGRESQL)
+    # Em vez de func.sum(UserAnswer.is_correct), usamos:
+    total_correct = db.session.query(func.count(UserAnswer.id)).filter_by(user_id=user_id, is_correct=True).scalar() or 0
+
+    # 3. Estatísticas por Matéria (CORREÇÃO PARA POSTGRESQL)
+    # Precisamos fazer um join para pegar o nome da matéria
+    stats_by_subject = db.session.query(
+        Subject.name,
+        func.count(UserAnswer.id).label('total'),
+        # O 'case' conta 1 se for true, senão null (que o count ignora)
+        func.count(case((UserAnswer.is_correct == True, 1))).label('correct')
+    ).join(UserAnswer.question)\
+     .join(Question.topic)\
+     .join(Topic.subject)\
+     .filter(UserAnswer.user_id == user_id)\
+     .group_by(Subject.name).all()
+     
+     # Nota: Se o seu modelo UserAnswer não tem relação direta, ajuste os joins acima
+     # baseados em como você ligou as tabelas (UserAnswer -> Question -> Topic -> Subject)
+
+    subject_data = []
+    for subject_name, total, correct in stats_by_subject:
+        subject_data.append({
+            "name": subject_name,
+            "total": total,
+            "correct": correct,
+            "percentage": round((correct / total) * 100, 1) if total > 0 else 0
         })
 
-    # Ordenar: Primeiro os maiores percentuais para ficar bonito na tela
-    subjects_performance.sort(key=lambda x: x['score'], reverse=True)
-
     return jsonify({
-        'total_questions': total,
-        'accuracy': accuracy,
-        'correct_count': correct,
-        'incorrect_count': incorrect,
-        'subjects': subjects_performance
+        "total_questions": total_answered,
+        "correct_answers": total_correct,
+        "incorrect_answers": total_answered - total_correct,
+        "accuracy": round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0,
+        "subjects": subject_data
     })
