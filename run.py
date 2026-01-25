@@ -25,3 +25,9 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    # ADICIONE ESTAS DUAS LINHAS:
+    print("--- CONECTANDO EM: ---")
+    print(app.config.get('SQLALCHEMY_DATABASE_URI'))
+    print("----------------------")
+    
+    app.run(debug=True)
