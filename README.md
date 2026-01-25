@@ -11,14 +11,6 @@
 
 ---
 
-## 📸 Screenshots
-
-| Dashboard do Aluno | Painel Administrativo |
-|:------------------:|:---------------------:|
-| ![Dashboard](https://via.placeholder.com/400x200?text=Dashboard+Image) | ![Admin](https://via.placeholder.com/400x200?text=Admin+Image) |
-
----
-
 ## 🚀 Funcionalidades Principais
 
 ### 👤 Para Estudantes
