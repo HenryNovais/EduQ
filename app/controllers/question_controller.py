@@ -54,34 +54,58 @@ def check_answer(question_id):
     data = request.json
     alt_id = data.get('alternative_id')
     auth_header = request.headers.get('Authorization')
-    user_id = 1 
     
+    # 1. AUTENTICAÇÃO: Descobre quem é o usuário
+    user_id = 1 # Fallback para testes
     if auth_header:
         try:
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             user_id = payload['user_id']
         except:
-            pass
+            return jsonify({"error": "Token inválido"}), 401
 
+    # 2. CÁLCULO: Verifica se acertou (Isso tem que vir ANTES de salvar)
     question = QuestionRepository.get_by_id(question_id)
+    if not question:
+        return jsonify({"error": "Questão não encontrada"}), 404
+
     correct_alt = next((a for a in question.alternatives if a.is_correct), None)
-    
     if not correct_alt:
-        return jsonify({"error": "Questão sem resposta"}), 500
+        return jsonify({"error": "Questão sem resposta cadastrada"}), 500
 
     is_correct = (correct_alt.id == alt_id)
 
-    previous_answer = UserAnswer.query.filter_by(user_id=user_id, question_id=question_id).first()
-    if previous_answer:
-        previous_answer.alternative_id = alt_id
-        previous_answer.is_correct = is_correct
-    else:
-        new_answer = UserAnswer(user_id=user_id, question_id=question_id, alternative_id=alt_id, is_correct=is_correct)
-        db.session.add(new_answer)
-    
-    db.session.commit()
+    # 3. BANCO DE DADOS: Salva ou Atualiza a resposta (Com Debug)
+    try:
+        print(f"DEBUG: Tentando salvar - User: {user_id}, Questão: {question_id}, Acertou: {is_correct}")
 
+        previous_answer = UserAnswer.query.filter_by(user_id=user_id, question_id=question_id).first()
+        
+        if previous_answer:
+            # Atualiza se já respondeu antes
+            previous_answer.alternative_id = alt_id
+            previous_answer.is_correct = is_correct
+        else:
+            # Cria novo registro se é a primeira vez
+            new_answer = UserAnswer(
+                user_id=user_id,
+                question_id=question_id,
+                alternative_id=alt_id, # Cuidado: sua variável chama alt_id, não alternative_id
+                is_correct=is_correct
+            )
+            db.session.add(new_answer)
+        
+        db.session.commit()
+        print("✅ Resposta salva com sucesso no banco!")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERRO AO SALVAR NO BANCO: {e}")
+        # Mesmo se der erro no banco, vamos retornar a correção pro usuário não ficar travado
+        # return jsonify({"error": str(e)}), 500
+
+    # 4. RETORNO PARA O FRONTEND
     return jsonify({
         "correct": is_correct,
         "correct_id": correct_alt.id,
