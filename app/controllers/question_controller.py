@@ -198,25 +198,105 @@ def delete_question(id):
         return jsonify({"error": "Token inválido"}), 401
 
     # 2. Buscar a questão
-    question = QuestionRepository.get_by_id(id) # Ou Question.query.get(id)
+    question = Question.query.get(id)
     if not question:
         return jsonify({"error": "Questão não encontrada"}), 404
 
-    try:
-        # 3. LIMPEZA DOS DADOS (Cascata Manual)
-        # Primeiro apaga o histórico de respostas dessa questão
-        UserAnswer.query.filter_by(question_id=id).delete()
-        
-        # Depois apaga as alternativas dessa questão
-        Alternative.query.filter_by(question_id=id).delete()
+    # --- SALVAR REFERÊNCIAS ANTES DE DELETAR ---
+    # Precisamos guardar os IDs dos pais para verificar se eles ficarão vazios depois
+    inst_id = question.institution_id
+    topic_id = question.topic_id
+    # Se tiver tópico, pegamos o ID da matéria dele
+    subj_id = question.topic.subject_id if question.topic else None
 
-        # Por fim, apaga a questão
-        db.session.delete(question)
+    try:
+        # 3. LIMPEZA DOS DADOS DA QUESTÃO (Cascata Manual)
+        UserAnswer.query.filter_by(question_id=id).delete()
+        Alternative.query.filter_by(question_id=id).delete()
         
-        db.session.commit()
-        return jsonify({"message": "Questão excluída com sucesso!"}), 200
+        db.session.delete(question)
+        db.session.commit() # Commitamos aqui para a questão sumir do banco
+        
+        # 4. LIMPEZA DE FILTROS "ÓRFÃOS"
+        # Agora verificamos se sobrou alguém. Se a contagem for 0, deletamos o pai.
+
+        # A. Verificar Instituição
+        if inst_id:
+            remaining_qs = Question.query.filter_by(institution_id=inst_id).count()
+            if remaining_qs == 0:
+                Institution.query.filter_by(id=inst_id).delete()
+                print(f"🗑️ Instituição {inst_id} removida por estar vazia.")
+
+        # B. Verificar Tópico
+        if topic_id:
+            remaining_qs_topic = Question.query.filter_by(topic_id=topic_id).count()
+            if remaining_qs_topic == 0:
+                Topic.query.filter_by(id=topic_id).delete()
+                print(f"🗑️ Tópico {topic_id} removido por estar vazio.")
+                
+                # C. Verificar Matéria (Só faz sentido checar se o tópico foi deletado)
+                # Se deletamos o tópico, verificamos se a Matéria ficou sem nenhum tópico
+                if subj_id:
+                    remaining_topics = Topic.query.filter_by(subject_id=subj_id).count()
+                    if remaining_topics == 0:
+                        Subject.query.filter_by(id=subj_id).delete()
+                        print(f"🗑️ Matéria {subj_id} removida por estar vazia.")
+
+        db.session.commit() # Commitamos as limpezas de filtros
+        return jsonify({"message": "Questão e filtros vazios excluídos com sucesso!"}), 200
 
     except Exception as e:
         db.session.rollback()
-        # Agora o erro vai aparecer detalhado no seu alert
+        return jsonify({"error": str(e)}), 500
+    
+
+@question_bp.route('/cleanup_filters', methods=['DELETE'])
+def cleanup_filters():
+    # 1. Segurança (Só Admin)
+    auth_header = request.headers.get('Authorization')
+    if not auth_header: return jsonify({"error": "Token ausente"}), 401
+    
+    try:
+        token = auth_header.split(" ")[1]
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        if not payload.get('is_admin'):
+            return jsonify({"error": "Acesso negado"}), 403
+    except:
+        return jsonify({"error": "Token inválido"}), 401
+
+    try:
+        deleted_log = []
+
+        # 2. Limpar Tópicos Vazios (Aqueles que não têm nenhuma questão vinculada)
+        # Atenção: Precisamos usar o outerjoin para achar quem NÃO tem correspondência
+        
+        # A. Tópicos sem questões
+        topics = Topic.query.outerjoin(Question).filter(Question.id == None).all()
+        for t in topics:
+            db.session.delete(t)
+            deleted_log.append(f"Tópico deletado: {t.name}")
+        
+        db.session.commit() # Commitamos para atualizar a tabela de Tópicos antes de checar Matérias
+
+        # B. Matérias sem Tópicos (Agora que limpamos os tópicos vazios, checamos as matérias)
+        subjects = Subject.query.outerjoin(Topic).filter(Topic.id == None).all()
+        for s in subjects:
+            db.session.delete(s)
+            deleted_log.append(f"Matéria deletada: {s.name}")
+
+        # C. Instituições sem Questões
+        institutions = Institution.query.outerjoin(Question).filter(Question.id == None).all()
+        for i in institutions:
+            db.session.delete(i)
+            deleted_log.append(f"Instituição deletada: {i.name}")
+
+        db.session.commit()
+
+        return jsonify({
+            "message": "Faxina concluída com sucesso!",
+            "deleted_items": deleted_log
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
