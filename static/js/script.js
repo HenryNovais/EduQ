@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     setupTheme();
     loadFilterOptions();
-    const isAdmin = localStorage.getItem('isAdmin') === 'true'; // O localStorage salva como string
+    const isAdmin = localStorage.getItem('isAdmin') === 'true'; 
     if (isAdmin) {
         document.getElementById('admin-btn').style.display = 'inline-block';
     }
@@ -19,13 +19,13 @@ function checkAuth() {
 
 function loadUserData() {
     const name = localStorage.getItem('userName') || 'Estudante';
-    const email = localStorage.getItem('userEmail') || 'usuario@eduq.com'; // Pega do localStorage
+    const email = localStorage.getItem('userEmail') || 'usuario@eduq.com';
 
     document.getElementById('user-name').textContent = name;
 
-    // Atualiza os dados dentro do menu suspenso (Dropdown)
+    // Atualiza os dados dentro do menu suspenso
     document.getElementById('dropdown-name').textContent = name;
-    document.getElementById('dropdown-email').textContent = email; // Agora mostra o email certo!
+    document.getElementById('dropdown-email').textContent = email;
 }
 
 /* --- TEMA DARK/LIGHT --- */
@@ -162,7 +162,6 @@ function renderQuestions(questions) {
             `;
         }
 
-        // AQUI ESTÁ A CORREÇÃO VISUAL: Usamos q.institution, q.subject, etc.
         card.innerHTML = `
             ${deleteBtn}<div class="tags">
                 <span class="tag" style="background:#e3f2fd; color:#0d47a1;">${q.institution}</span>
