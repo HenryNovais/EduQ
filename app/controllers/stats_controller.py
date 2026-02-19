@@ -67,8 +67,8 @@ def get_stats():
         return jsonify({
             'total_questions': total_answered,
             'accuracy': accuracy,
-            'correct_count': total_correct,     # Nome corrigido (antes estava correct_answers)
-            'incorrect_count': total_incorrect, # Nome corrigido (antes estava incorrect_answers)
+            'correct_count': total_correct,     
+            'incorrect_count': total_incorrect, 
             'subjects': subjects_performance
         })
 
