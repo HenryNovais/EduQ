@@ -30,7 +30,6 @@ def search():
     for q in questions:
         alts = [{'id': a.id, 'text': a.text} for a in q.alternatives]
         
-        # AQUI ESTAVA O ERRO DAS TAGS:
         # Agora pegamos o nome real do relacionamento no banco
         inst_name = q.institution.name if q.institution else "Outra"
         topic_name = q.topic.name if q.topic else "Geral"
@@ -42,9 +41,9 @@ def search():
             'statement': q.statement,
             'explanation': q.explanation,
             'difficulty': q.difficulty,
-            'institution': inst_name,  # Manda o nome certo pro frontend
-            'subject': subject_name,   # Manda o nome certo pro frontend
-            'topic': topic_name,       # Manda o nome certo pro frontend
+            'institution': inst_name,  
+            'subject': subject_name,   
+            'topic': topic_name,       
             'alternatives': alts
         })
     return jsonify(output), 200
@@ -102,8 +101,7 @@ def check_answer(question_id):
     except Exception as e:
         db.session.rollback()
         print(f"❌ ERRO AO SALVAR NO BANCO: {e}")
-        # Mesmo se der erro no banco, vamos retornar a correção pro usuário não ficar travado
-        # return jsonify({"error": str(e)}), 500
+        
 
     # 4. RETORNO PARA O FRONTEND
     return jsonify({
@@ -135,7 +133,7 @@ def create_question():
         if not institution:
             institution = Institution(name=inst_name)
             db.session.add(institution)
-            db.session.flush() # Gera o ID sem commitar ainda
+            db.session.flush() 
 
         # 3. Processar Matéria (Busca ou Cria)
         subj_name = data.get('subject')
@@ -160,13 +158,13 @@ def create_question():
             difficulty=data.get('difficulty'),
             institution=institution,
             topic=topic,
-            year=datetime.now().year # Ou pegar do input se quiser
+            year=datetime.now().year
         )
         db.session.add(new_q)
         db.session.flush()
 
         # 6. Criar Alternativas
-        alternatives_data = data.get('alternatives') # Lista de objetos {text: "...", is_correct: bool}
+        alternatives_data = data.get('alternatives') # Lista de objetos {text: "...", is_correct: bool
         for alt in alternatives_data:
             new_alt = Alternative(
                 text=alt['text'],
@@ -203,7 +201,6 @@ def delete_question(id):
         return jsonify({"error": "Questão não encontrada"}), 404
 
     # --- SALVAR REFERÊNCIAS ANTES DE DELETAR ---
-    # Precisamos guardar os IDs dos pais para verificar se eles ficarão vazios depois
     inst_id = question.institution_id
     topic_id = question.topic_id
     # Se tiver tópico, pegamos o ID da matéria dele
@@ -215,9 +212,9 @@ def delete_question(id):
         Alternative.query.filter_by(question_id=id).delete()
         
         db.session.delete(question)
-        db.session.commit() # Commitamos aqui para a questão sumir do banco
+        db.session.commit() 
         
-        # 4. LIMPEZA DE FILTROS "ÓRFÃOS"
+        # 4. LIMPEZA DE FILTROS
         # Agora verificamos se sobrou alguém. Se a contagem for 0, deletamos o pai.
 
         # A. Verificar Instituição
