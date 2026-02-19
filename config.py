@@ -15,7 +15,6 @@ class Config:
             SQLALCHEMY_DATABASE_URI = database_url
     else:
         # SE NÃO TEM (SEU COMPUTADOR), USA O MYSQL
-        # Substitua root:1234 pela sua senha real se precisar
         SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:1234@localhost/vestibular_db'
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
